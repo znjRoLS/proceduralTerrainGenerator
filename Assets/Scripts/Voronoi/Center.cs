@@ -28,7 +28,6 @@ public class Center {
 	public List<Corner> corners;
 
 	public BiomeTypes getBiome() {
-		BiomeTypes b;
 		if (this.ocean) {
 			return BiomeTypes.OCEAN;
 		} else if (this.water) {
