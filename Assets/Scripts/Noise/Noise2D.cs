@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-interface Noise2D{
+public interface Noise2D{
 
 	float getNoise(float x, float y);
 

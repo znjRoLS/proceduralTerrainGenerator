@@ -4,23 +4,27 @@ using System.Collections.Generic;
 
 public class GraphVoronoi {
 
-	private List<Vector2> points;
-	public List<Vector2> Points{ get { return points; } }
+	private int p_boundaryOffset = 10;
 
-	private List<Center> centers;
-	public List<Center> Centers{ get { return centers; } }
+	private List<Vector2> p_points;
+	public List<Vector2> Points{ get { return p_points; } }
+
+	private List<Center> p_centers;
+	public List<Center> Centers{ get { return p_centers; } }
 	
-	private List<Edge> edges;
-	public List<Edge> Edges{ get { return edges; } }
+	private List<Edge> p_edges;
+	public List<Edge> Edges{ get { return p_edges; } }
 
-	private List<Corner> corners;
-	public List<Corner> Corners{ get { return corners; } }
+	private List<Corner> p_corners;
+	public List<Corner> corners{ get { return p_corners; } }
 
-	private Vector2 voronoiMapSize;
-	public Vector2 VoronoiMapSize{ set { voronoiMapSize = value; } }
-	
+	private Vector2 p_voronoiMapSize;
+	public Vector2 voronoiMapSize{ set { p_voronoiMapSize = value; } }
 
-	private Delaunay.Voronoi voronoi;
+	private PointGenerator p_pointGenerator;
+	public PointGenerator pointGenerator{ set { p_pointGenerator = value; } }
+
+	private Delaunay.Voronoi p_voronoi;
 
 
 
@@ -29,20 +33,27 @@ public class GraphVoronoi {
 	}
 
 	private void init(){
-			points = new List<Vector2> ();
-			centers = new List<Center> ();
-			edges = new List<Edge> ();
-			corners = new List<Corner> ();
+		p_points = new List<Vector2> ();
+		p_centers = new List<Center> ();
+		p_edges = new List<Edge> ();
+		p_corners = new List<Corner> ();
 	}
 
 
 
-	private void setPoints(){
 
+
+	public void buildGraph(int numPoints){
+		setPoints (numPoints);
+		p_voronoi = new Delaunay.Voronoi (p_points, null, new Rect (0, 0, p_voronoiMapSize.x, p_voronoiMapSize.y));
+	
+	
 	}
 
-	public void buildGraph(){
-		voronoi = new Delaunay.Voronoi (points, null, new Rect (0, 0, voronoiMapSize.x, voronoiMapSize.y));
+
+
+	private void setPoints(int numPoints){
+		p_points = p_pointGenerator.generate (numPoints,p_voronoiMapSize, p_boundaryOffset);
 	}
 
 
