@@ -17,7 +17,7 @@ public class TerrainGenerator : MonoBehaviour {
 	public int mountainNoiseOctave = 8;
 
 
-	//HeightMap
+	//height ,terrain and alpha map
 	private HeightMap p_heightMap;
 	private Vector2 p_terrainSize;
 
@@ -60,6 +60,10 @@ public class TerrainGenerator : MonoBehaviour {
 
 		buildGraph ();
 
+		assignBiomes ();
+
+		fillAlphaMap ();
+
 	}
 
 	private void setupGroundNoise(){
@@ -100,10 +104,56 @@ public class TerrainGenerator : MonoBehaviour {
 
 	private void buildGraph(){
 
-		p_graphVoronoi = new GraphVoronoi(voronoiPoints);
+		p_graphVoronoi = new GraphVoronoi(voronoiPoints, heightMapSize);
 		p_graphVoronoi.pointGenerator = new RandomPointGenerator ();
+		p_graphVoronoi.createGraph ();
+		p_graphVoronoi.assignCornerElevations (p_heightMap);
 		p_graphVoronoi.buildGraph ();
 		p_graphVoronoi.fillNearestCenters ();
+
+	}
+
+	private void assignBiomes(){
+		foreach (Center p in p_graphVoronoi.centers) {
+			p.biome = p.getBiome();
+		}
+	}
+
+	private void fillAlphaMap(){
+
+		float[,,] map  = new float[m_alphaMapSize, m_alphaMapSize, 18];
+		
+		Random.seed = 0;
+		bool [] bla = new bool[20];
+		for (int i=0; i<19; i++)
+			bla [i] = false;
+		for(int x = 0; x < m_alphaMapSize; x++) 
+		{
+			for (int z = 0; z < m_alphaMapSize; z++) 
+			{
+				
+				float ratio = (float)(m_heightMapSize-1)/m_alphaMapSize;
+				
+				Center.BiomeTypes biome = getCenter[(int)(x*ratio),(int)(z*ratio)].biome;
+				
+				for (int i=0; i< 18;i++)
+					map[x,z,i]= 0;
+				
+				
+				if (htmap[x,z]<0.15f)
+				{
+					map[x,z,6]=1;
+					//					
+				}
+				else
+					map[x,z,(int)biome]=1;
+				bla[(int)biome]=true;
+			}
+		}
+		for (int i=0; i<19; i++)
+			if (bla [i])
+				Debug.Log (i);
+		terrainData.SetAlphamaps(0, 0, map); //pridruzi alfa mapu terenu
 
 	}
 }

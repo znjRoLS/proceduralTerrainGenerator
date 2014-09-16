@@ -33,7 +33,7 @@ public class HeightMapGeneratorIsland : HeightMapGenerator {
 				float ground = p_groundNoise.getNoise(worldPosX, worldPosY);
 
 				float dist = getRadialDistance(i,j);
-				dist = dist * Mathf(2,0.5f);
+				dist = dist * Mathf.Pow(2,0.5f);
 				float dist2=Mathf.Min (dist,0.99f);
 
 				float height = ground;
