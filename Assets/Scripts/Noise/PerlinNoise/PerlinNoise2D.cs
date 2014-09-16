@@ -15,6 +15,14 @@ public class PerlinNoise2D : Noise2D {
 	private int octave;
 	public int Octave{ set { octave = value; } }
 
+	private int seed;
+	public int Seed {
+				set {
+						seed = value;
+						perlinNoise = new PerlinNoise (seed);
+				}
+		}
+
 	private PerlinNoise perlinNoise;
 
 
@@ -32,11 +40,7 @@ public class PerlinNoise2D : Noise2D {
 	}
 
 
-
-
-	public void setSeed(int seed){
-		this.perlinNoise = new PerlinNoise (seed);
-	}
+	
 
 	public float getNoise(float x, float y){
 		float noise = perlinNoise.FractalNoise2D(x,y,octave,frequency,amplitude);
