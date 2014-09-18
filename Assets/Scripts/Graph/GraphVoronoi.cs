@@ -89,6 +89,10 @@ public class GraphVoronoi {
 
 	}
 
+	public Center getNearestCenter(int i, int j){
+		return p_nearestCenter [i, j];
+		}
+
 	public void assignCornerElevations(HeightMap heightMap){
 
 		
