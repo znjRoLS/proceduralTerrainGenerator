@@ -23,6 +23,7 @@ public class TerrainGenerator : MonoBehaviour {
 	private HeightMap p_heightMap;
 	private Vector2 p_terrainSize;
 	private AlphaMap p_alphaMap;
+	private DetailMap p_detailMap;
 	
 	public int detailMapSize = 512;
 	public int alphaMapSize = 500;
@@ -42,6 +43,8 @@ public class TerrainGenerator : MonoBehaviour {
 	//textures and trees
 	private List<SplatPrototype> texturePrototypes;
 	private List<TreePrototype> treePrototypes;
+	private List<DetailPrototype> detailPrototypes;
+	private int[,,] detailMap;
 
 	public Texture2D[] textures;
 	public GameObject waterTexture;
@@ -72,7 +75,7 @@ public class TerrainGenerator : MonoBehaviour {
 	public Color m_grassHealthyColor = Color.white;
 	public Color m_grassDryColor = Color.white;
 	
-	DetailPrototype[] m_detailProtoTypes;
+
 
 
 	//da houses
@@ -98,6 +101,7 @@ public class TerrainGenerator : MonoBehaviour {
 		p_terrainSize = new Vector2 (terrainSizeX, terrainSizeY);
 		texturePrototypes = new List<SplatPrototype> ();
 		treePrototypes = new List<TreePrototype> ();
+		detailPrototypes = new List<DetailPrototype> ();
 	}
 
 
@@ -116,13 +120,14 @@ public class TerrainGenerator : MonoBehaviour {
 
 		createWater ();
 
-		fillTexturesAndTrees ();
+		fillPrototypes ();
+
+		fillDetailMap ();
 
 		createTerrain ();
 
-		FillTreeInstances ();
+		fillTreeInstances ();
 
-		FillDetailMap ();
 
 		Field.start (p_terrain, heightMapSize, p_heightMap.map,object1, object2, object3, waterLevel);
 
@@ -166,6 +171,29 @@ public class TerrainGenerator : MonoBehaviour {
 
 	}
 
+	private void fillDetailMap(){
+
+		p_detailMap = new DetailMap(detailMapSize, details.Length);
+		p_detailMap.heightMapSize = heightMapSize;
+
+		DetailMapGenerator detailMapGenerator = new DetailMapGenerator3 ();
+
+		detailMapGenerator.generate (p_detailMap, p_graphVoronoi);		
+		
+	}
+
+	private void fillAlphaMap(){
+		Debug.Log (textures.Length);
+		p_alphaMap = new AlphaMap (alphaMapSize, textures.Length);
+		p_alphaMap.terrainSize = p_terrainSize;
+		
+		AlphaMapGenerator alphaMapGenerator = new AlphaMapGeneratorBiomes ();
+		
+		alphaMapGenerator.generate (p_alphaMap, p_graphVoronoi);
+		
+		
+	}
+
 	private void buildGraph(){
 
 		p_graphVoronoi = new GraphVoronoi(voronoiPoints, heightMapSize);
@@ -184,17 +212,7 @@ public class TerrainGenerator : MonoBehaviour {
 		}
 	}
 
-	private void fillAlphaMap(){
-		Debug.Log (textures.Length);
-		p_alphaMap = new AlphaMap (alphaMapSize, textures.Length);
-		p_alphaMap.terrainSize = p_terrainSize;
 
-		AlphaMapGenerator alphaMapGenerator = new AlphaMapGeneratorBiomes ();
-
-		alphaMapGenerator.generate (p_alphaMap, p_graphVoronoi);
-
-
-	}
 
 	private void createWater(){
 		int sizeX = (int) (terrainSizeX /2 * 1.41);
@@ -205,7 +223,7 @@ public class TerrainGenerator : MonoBehaviour {
 		water.transform.localScale = v + new Vector3 (sizeX, 0, sizeY);
 	}
 
-	private void fillTexturesAndTrees(){
+	private void fillPrototypes(){
 		
 		for (int i= 0; i < textures.Length ; i++) {
 			
@@ -225,18 +243,29 @@ public class TerrainGenerator : MonoBehaviour {
 			treePrototypes.Add( treePrototype);
 			
 		}
+
+		for (int i=0; i< details.Length; i++) {
+		
+			DetailPrototype detailPrototype = new DetailPrototype();
+			detailPrototype.prototypeTexture = details[i];
+			detailPrototype.renderMode = detailMode;
+			detailPrototype.healthyColor = m_grassHealthyColor;
+			detailPrototype.dryColor = m_grassDryColor;
+
+			detailPrototypes.Add (detailPrototype);
+		}
+
 	}
 
 	private void createTerrain(){
-		p_terrain = new Terrain();
 
 		TerrainData terrainData = new TerrainData();
 		terrainData.heightmapResolution = heightMapSize;
 		terrainData.SetHeights(0, 0, p_heightMap.map);
-		Debug.Log (terrainHeight);
 		terrainData.size = new Vector3((float)terrainSizeX, (float)terrainHeight, (float)terrainSizeY);
 		terrainData.splatPrototypes = texturePrototypes.ToArray();
 		terrainData.treePrototypes = treePrototypes.ToArray();
+		terrainData.detailPrototypes = detailPrototypes.ToArray();
 		terrainData.alphamapResolution = alphaMapSize;
 		terrainData.SetAlphamaps(0, 0, p_alphaMap.splitMap); //pridruzi alfa mapu terenu
 		
@@ -252,9 +281,27 @@ public class TerrainGenerator : MonoBehaviour {
 		p_terrain.treeBillboardDistance = m_treeBillboardDistance;
 		p_terrain.treeCrossFadeLength = m_treeCrossFadeLength;
 		p_terrain.treeMaximumFullLODCount = m_treeMaximumFullLODCount;
+
+		p_terrain.terrainData.wavingGrassStrength = m_wavingGrassStrength;
+		p_terrain.terrainData.wavingGrassAmount = m_wavingGrassAmount;
+		p_terrain.terrainData.wavingGrassSpeed = m_wavingGrassSpeed;
+		p_terrain.terrainData.wavingGrassTint = m_wavingGrassTint;
+		p_terrain.detailObjectDensity = m_detailObjectDensity;
+		p_terrain.detailObjectDistance = m_detailObjectDistance;
+		p_terrain.terrainData.SetDetailResolution(detailMapSize, m_detailResolutionPerPatch);
+
+//		int[,] dd = new int[512,512];
+//		for (int i=0; i<512; i++)
+//						for (int j=0; j<512; j++)
+//								dd [i, j] = 0;
+//
+//		p_terrain.terrainData.SetDetailLayer (0, 0, 0, dd);
+		for (int i=0; i< p_detailMap.map.Count ; i++)
+			p_terrain.terrainData.SetDetailLayer(0,0,i,p_detailMap.map[i]);
+
 	}
 
-	void FillTreeInstances()
+	void fillTreeInstances()
 	{
 		Random.seed = 0;
 		
@@ -325,104 +372,6 @@ public class TerrainGenerator : MonoBehaviour {
 		
 	}
 
-	private void FillDetailMap(){
 
-		m_detailProtoTypes = new DetailPrototype[3];
-		
-		m_detailProtoTypes[0] = new DetailPrototype();
-		m_detailProtoTypes[0].prototypeTexture = details[0];
-		m_detailProtoTypes[0].renderMode = detailMode;
-		m_detailProtoTypes[0].healthyColor = m_grassHealthyColor;
-		m_detailProtoTypes[0].dryColor = m_grassDryColor;
-		
-		m_detailProtoTypes[1] = new DetailPrototype();
-		m_detailProtoTypes[1].prototypeTexture = details[1];
-		m_detailProtoTypes[1].renderMode = detailMode;
-		m_detailProtoTypes[1].healthyColor = m_grassHealthyColor;
-		m_detailProtoTypes[1].dryColor = m_grassDryColor;
-		
-		m_detailProtoTypes[2] = new DetailPrototype();
-		m_detailProtoTypes[2].prototypeTexture = details[2];
-		m_detailProtoTypes[2].renderMode = detailMode;
-		m_detailProtoTypes[2].healthyColor = m_grassHealthyColor;
-		m_detailProtoTypes[2].dryColor = m_grassDryColor;
-
-
-		//each layer is drawn separately so if you have a lot of layers your draw calls will increase 
-		int[,] detailMap0 = new int[detailMapSize,detailMapSize];
-		int[,] detailMap1 = new int[detailMapSize,detailMapSize];
-		int[,] detailMap2 = new int[detailMapSize,detailMapSize];
-		
-		//	float ratio = (float)m_terrainSize/(float)m_detailMapSize;
-		
-		//Random.seed = 0;
-		
-		for(int x = 0; x <detailMapSize; x ++) 
-		{
-			for (int z = 0; z <detailMapSize; z ++) 
-			{
-				
-				detailMap0[z,x] = 0;
-				detailMap1[z,x] = 0;
-				detailMap2[z,x] = 0;
-
-				float ratio1 = (float)(heightMapSize-1)/(float)detailMapSize;
-				Center.BiomeTypes biome = p_graphVoronoi.getNearestCenter((int)(x*ratio1),(int)(z*ratio1)).biome;
-				
-				
-				int det = 10;
-				if ((int)biome == 6) {det= 0;}
-				if ((int)biome ==12) {det = 1;}
-				if (( int)biome==8) {det=2;}
-				
-				//float unit = 1.0f / (m_detailMapSize - 1);
-				
-				//float normX = x * unit;
-				//float normZ = z * unit;
-				
-				// Get the steepness value at the normalized coordinate.
-				//	float angle = terrain.terrainData.GetSteepness(normX, normZ);
-				
-				// Steepness is given as an angle, 0..90 degrees. Divide
-				// by 90 to get an alpha blending value in the range 0..1.
-				//float frac = angle / 90.0f;
-				
-				if(det<10 )
-					
-				{
-					/*float worldPosX = (x+(m_detailMapSize-1))*ratio;
-					float worldPosZ = (z+(m_detailMapSize-1))*ratio;
-					
-					float noise = m_detailNoise.FractalNoise2D(worldPosX, worldPosZ, 3, m_detailFrq, 1.0f);
-					
-					if(noise > 0.0f) 
-					{*/
-					float rnd = Random.value;
-					//Randomly select what layer to use
-					if(rnd < 0.01f)
-						detailMap0[z,x] = 1;
-					else if(rnd < 0.75f)
-						detailMap1[z,x] = 1;
-					else
-						detailMap2[z,x] = 1;
-					
-				}
-				
-			}
-		}
-		
-		p_terrain.terrainData.wavingGrassStrength = m_wavingGrassStrength;
-		p_terrain.terrainData.wavingGrassAmount = m_wavingGrassAmount;
-		p_terrain.terrainData.wavingGrassSpeed = m_wavingGrassSpeed;
-		p_terrain.terrainData.wavingGrassTint = m_wavingGrassTint;
-		p_terrain.detailObjectDensity = m_detailObjectDensity;
-		p_terrain.detailObjectDistance = m_detailObjectDistance;
-		p_terrain.terrainData.SetDetailResolution(detailMapSize, m_detailResolutionPerPatch);
-		
-		p_terrain.terrainData.SetDetailLayer(0,0,0,detailMap0);
-		p_terrain.terrainData.SetDetailLayer(0,0,1,detailMap1);
-		p_terrain.terrainData.SetDetailLayer(0,0,2,detailMap2);
-		
-	}
 
 }

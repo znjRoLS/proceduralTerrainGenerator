@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public enum cityKind{VILLAGE, TOWN, METRO, NONE};
 
-public class CityPicker : MonoBehaviour {
+public class CityPicker {
 	
 
 	const int villageSize = 2;

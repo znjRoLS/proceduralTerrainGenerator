@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class City : MonoBehaviour{
+public class City{
 
 
 	public GameObject cube;
