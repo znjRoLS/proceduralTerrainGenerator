@@ -23,7 +23,8 @@ public class TerrainGenerator : MonoBehaviour {
 	private HeightMap p_heightMap;
 	private Vector2 p_terrainSize;
 	private AlphaMap p_alphaMap;
-
+	
+	public int detailMapSize = 512;
 	public int alphaMapSize = 500;
 	public int heightMapSize = 513;
 	public int terrainSizeX = 2048;
@@ -45,17 +46,37 @@ public class TerrainGenerator : MonoBehaviour {
 	public Texture2D[] textures;
 	public GameObject waterTexture;
 	public GameObject[] trees;
+	public Texture2D[] details;
 
 
 	//@todo refactor
 	public int m_treeSeed = 2;
 	public float  m_treeFrq = 400.0f;
 	//Tree settings
-	public int m_treeSpacing = 32; //spacing between trees
+	public int[] m_treeSpacing; //spacing between trees
 	public float m_treeDistance = 2000.0f; //The distance at which trees will no longer be drawn
 	public float m_treeBillboardDistance = 400.0f; //The distance at which trees meshes will turn into tree billboards
 	public float m_treeCrossFadeLength = 20.0f; //As trees turn to billboards there transform is rotated to match the meshes, a higher number will make this transition smoother
 	public int m_treeMaximumFullLODCount = 400; //The maximum number of trees that will be drawn in a certain area. 
+
+
+	//Detail settings
+	public DetailRenderMode detailMode;
+	public int m_detailObjectDistance = 400; //The distance at which details will no longer be drawn
+	public float m_detailObjectDensity = 4.0f; //Creates more dense details within patch
+	public int m_detailResolutionPerPatch = 32; //The size of detail patch. A higher number may reduce draw calls as details will be batch in larger patches
+	public float m_wavingGrassStrength = 0.4f;
+	public float m_wavingGrassAmount = 0.2f;
+	public float m_wavingGrassSpeed = 0.4f;
+	public Color m_wavingGrassTint = Color.white;
+	public Color m_grassHealthyColor = Color.white;
+	public Color m_grassDryColor = Color.white;
+	
+	DetailPrototype[] m_detailProtoTypes;
+
+
+	//da houses
+	public GameObject object1, object2, object3;
 
 
 	// Use this for initialization
@@ -99,7 +120,14 @@ public class TerrainGenerator : MonoBehaviour {
 
 		createTerrain ();
 
-		FillTreeInstances (p_terrain,p_heightMap.map);
+		FillTreeInstances ();
+
+		FillDetailMap ();
+
+		Field.start (p_terrain, heightMapSize, p_heightMap.map,object1, object2, object3, waterLevel);
+
+		foreach (GameObject house in GameObject.FindGameObjectsWithTag("house"))
+						house.transform.position += new Vector3 (-terrainSizeX / 2, 0, -terrainSizeY/2);
 
 	}
 
@@ -226,56 +254,174 @@ public class TerrainGenerator : MonoBehaviour {
 		p_terrain.treeMaximumFullLODCount = m_treeMaximumFullLODCount;
 	}
 
-	void FillTreeInstances(Terrain terrain,float [,] htmap)
+	void FillTreeInstances()
 	{
 		Random.seed = 0;
 		
-		for(int x = 0; x < terrainSizeX; x += m_treeSpacing) 
+		for(int x = 0; x < terrainSizeX; x ++) 
 		{
-			for (int y = 0; y < terrainSizeY; y += m_treeSpacing) 
+			for (int y = 0; y < terrainSizeY; y ++) 
 			{
-
 				
-				float offsetX = Random.value / (terrainSizeX - 1) * m_treeSpacing;
-				float offsetY = Random.value / (terrainSizeY - 1) * m_treeSpacing;
+				float ratio = (float)(heightMapSize-1)/terrainSizeX;
 				
-				float normX = x / (terrainSizeX - 1) + offsetX;
-				float normY = y / (terrainSizeY - 1) + offsetY;
+				Center.BiomeTypes biome = p_graphVoronoi.getNearestCenter((int)(x*ratio),(int)(y*ratio)).biome;
+				
+				//int space=0;
+				int tree = 10;
+				if ((int)biome == 4) {tree = 0;}
+				if ((int)biome ==9) {tree = 1;}
+				if ((int)biome == 10) { tree = 2;}
+				if ((int)biome == 11 ){ tree =3; }
+				if( (int) biome==13) { tree =4; }
+				
+				float unit = 1.0f / (terrainSizeX - 1);
+				
+				//float offsetX = Random.value * unit * m_treeSpacing;
+				//float offsetZ = Random.value * unit * m_treeSpacing;
+				
+				float normX = x * unit;// + offsetX;
+				float normZ = y * unit;// + offsetZ;
 				
 				// Get the steepness value at the normalized coordinate.
-				float angle = terrain.terrainData.GetSteepness(normX, normY);
+				float angle = p_terrain.terrainData.GetSteepness(normX, normZ);
 				
 				// Steepness is given as an angle, 0..90 degrees. Divide
 				// by 90 to get an alpha blending value in the range 0..1.
 				float frac = angle / 90.0f;
 				
-				float height = p_heightMap.getHeight((int)((float)y*heightMapSize/terrainSizeY),(int)((float)x*heightMapSize/terrainSizeX));
-		
+				float height = p_heightMap.getHeight(y*heightMapSize/terrainSizeY,x*heightMapSize/terrainSizeX);
+	
 				
-				if(frac < 0.5f && height> waterLevel+0.05f) //make sure tree are not on steep slopes & in the sea
+				if (tree<5)
 				{
-			
-					float ht = terrain.terrainData.GetInterpolatedHeight(normX, normY);
 					
-					if( ht < terrainHeight*0.4f)
+					if(frac < 0.5f && height> waterLevel+0.05f && Random.Range(0,m_treeSpacing[tree]) == 0) //make sure tree are not on steep slopes & in the sea
 					{
+						float worldPosX = x+(terrainSizeX-1);
+						float worldPosZ = y+(terrainSizeY-1);
 						
-						TreeInstance temp = new TreeInstance();
-						temp.position = new Vector3(normX,ht,normY);
-						temp.prototypeIndex = Random.Range(0,3);
-						temp.widthScale = 1;
-						temp.heightScale = 1;
-						temp.color = Color.white;
-						temp.lightmapColor = Color.white;
+						float ht = p_terrain.terrainData.GetInterpolatedHeight(normX, normZ);
 						
-						p_terrain.AddTreeInstance(temp);
+						if( ht < terrainHeight*0.4f )
+						{
+							
+							TreeInstance temp = new TreeInstance();
+							temp.position = new Vector3(normX,ht,normZ);
+							temp.prototypeIndex = tree;
+							temp.widthScale = 1;
+							temp.heightScale = 1;
+							temp.color = Color.white;
+							temp.lightmapColor = Color.white;
+							
+							p_terrain.AddTreeInstance(temp);
+						}
 					}
+				}
+			}
+		}
+		
+		
+		
+	}
+
+	private void FillDetailMap(){
+
+		m_detailProtoTypes = new DetailPrototype[3];
+		
+		m_detailProtoTypes[0] = new DetailPrototype();
+		m_detailProtoTypes[0].prototypeTexture = details[0];
+		m_detailProtoTypes[0].renderMode = detailMode;
+		m_detailProtoTypes[0].healthyColor = m_grassHealthyColor;
+		m_detailProtoTypes[0].dryColor = m_grassDryColor;
+		
+		m_detailProtoTypes[1] = new DetailPrototype();
+		m_detailProtoTypes[1].prototypeTexture = details[1];
+		m_detailProtoTypes[1].renderMode = detailMode;
+		m_detailProtoTypes[1].healthyColor = m_grassHealthyColor;
+		m_detailProtoTypes[1].dryColor = m_grassDryColor;
+		
+		m_detailProtoTypes[2] = new DetailPrototype();
+		m_detailProtoTypes[2].prototypeTexture = details[2];
+		m_detailProtoTypes[2].renderMode = detailMode;
+		m_detailProtoTypes[2].healthyColor = m_grassHealthyColor;
+		m_detailProtoTypes[2].dryColor = m_grassDryColor;
+
+
+		//each layer is drawn separately so if you have a lot of layers your draw calls will increase 
+		int[,] detailMap0 = new int[detailMapSize,detailMapSize];
+		int[,] detailMap1 = new int[detailMapSize,detailMapSize];
+		int[,] detailMap2 = new int[detailMapSize,detailMapSize];
+		
+		//	float ratio = (float)m_terrainSize/(float)m_detailMapSize;
+		
+		//Random.seed = 0;
+		
+		for(int x = 0; x <detailMapSize; x ++) 
+		{
+			for (int z = 0; z <detailMapSize; z ++) 
+			{
+				
+				detailMap0[z,x] = 0;
+				detailMap1[z,x] = 0;
+				detailMap2[z,x] = 0;
+
+				float ratio1 = (float)(heightMapSize-1)/(float)detailMapSize;
+				Center.BiomeTypes biome = p_graphVoronoi.getNearestCenter((int)(x*ratio1),(int)(z*ratio1)).biome;
+				
+				
+				int det = 10;
+				if ((int)biome == 6) {det= 0;}
+				if ((int)biome ==12) {det = 1;}
+				if (( int)biome==8) {det=2;}
+				
+				//float unit = 1.0f / (m_detailMapSize - 1);
+				
+				//float normX = x * unit;
+				//float normZ = z * unit;
+				
+				// Get the steepness value at the normalized coordinate.
+				//	float angle = terrain.terrainData.GetSteepness(normX, normZ);
+				
+				// Steepness is given as an angle, 0..90 degrees. Divide
+				// by 90 to get an alpha blending value in the range 0..1.
+				//float frac = angle / 90.0f;
+				
+				if(det<10 )
+					
+				{
+					/*float worldPosX = (x+(m_detailMapSize-1))*ratio;
+					float worldPosZ = (z+(m_detailMapSize-1))*ratio;
+					
+					float noise = m_detailNoise.FractalNoise2D(worldPosX, worldPosZ, 3, m_detailFrq, 1.0f);
+					
+					if(noise > 0.0f) 
+					{*/
+					float rnd = Random.value;
+					//Randomly select what layer to use
+					if(rnd < 0.01f)
+						detailMap0[z,x] = 1;
+					else if(rnd < 0.75f)
+						detailMap1[z,x] = 1;
+					else
+						detailMap2[z,x] = 1;
+					
 				}
 				
 			}
 		}
 		
+		p_terrain.terrainData.wavingGrassStrength = m_wavingGrassStrength;
+		p_terrain.terrainData.wavingGrassAmount = m_wavingGrassAmount;
+		p_terrain.terrainData.wavingGrassSpeed = m_wavingGrassSpeed;
+		p_terrain.terrainData.wavingGrassTint = m_wavingGrassTint;
+		p_terrain.detailObjectDensity = m_detailObjectDensity;
+		p_terrain.detailObjectDistance = m_detailObjectDistance;
+		p_terrain.terrainData.SetDetailResolution(detailMapSize, m_detailResolutionPerPatch);
 		
+		p_terrain.terrainData.SetDetailLayer(0,0,0,detailMap0);
+		p_terrain.terrainData.SetDetailLayer(0,0,1,detailMap1);
+		p_terrain.terrainData.SetDetailLayer(0,0,2,detailMap2);
 		
 	}
 

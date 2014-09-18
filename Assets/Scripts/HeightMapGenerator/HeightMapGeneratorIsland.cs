@@ -34,13 +34,22 @@ public class HeightMapGeneratorIsland : HeightMapGenerator {
 
 				//float dist = getRadialDistance(i,j);
 				//float dist = getRadialDistanceClamped(i,j);
-				float dist = getRadialDistanceClamped2(i,j);
 				//dist = dist * Mathf.Pow(2,0.5f);
 				//float dist2=Mathf.Min (dist,0.99f);
+				//float dist = getRadialDistanceClamped2(i,j);
 
+				float dist = getRadialCoastOnlyDistance(i,j);
 				float height = ground*Mathf.Pow((1.0f - dist),0.5f);
-				height += mountains*Mathf.Pow((1 - dist),0.5f)/3.0f;
-				height -= Mathf.Pow(dist,1.0f)/10;
+				height += mountains*Mathf.Pow((1 - dist),0.5f)/2.0f;
+				height -= Mathf.Pow(dist,1.0f)/13 * 10000/terrainSize.x;
+
+//				float dist = getRadialDistance(i,j) * Mathf.Pow (2,0.5f);
+//				float dist2=Mathf.Min (dist,1.0f);
+//				float height= ground;
+//				height += mountains*Mathf.Pow((1 - dist2),0.3f);
+//				height -= Mathf.Pow(dist,0.7f)/3;
+
+				heightMap.setHeight(i,j,height);
 
 				heightMap.setHeight(i,j,height);
 
@@ -71,6 +80,7 @@ public class HeightMapGeneratorIsland : HeightMapGenerator {
 	}
 
 	private float getRadialDistanceClamped2(int i, int j){
+
 		float distX = 2*((float)i/mapSize - 0.5f);
 		float distY = 2*((float)j/mapSize - 0.5f);
 		float dist = Mathf.Pow (Mathf.Pow (distX, 2) + Mathf.Pow (distY, 2), 0.5f);
@@ -78,6 +88,23 @@ public class HeightMapGeneratorIsland : HeightMapGenerator {
 		dist = Mathf.Min(1.0f, dist);
 		dist = Mathf.Max (0.1f, dist);
 
+
+
+		return dist;
+	}
+
+	private float getRadialCoastOnlyDistance(int i, int j){
+		float coastLimit = 0.75f;
+
+		float distX = 2*((float)i/mapSize - 0.5f);
+		float distY = 2*((float)j/mapSize - 0.5f);
+		float dist = Mathf.Pow (Mathf.Pow (distX, 2) + Mathf.Pow (distY, 2), 0.5f);
+		
+		dist = Mathf.Min(1.0f, dist);
+
+		dist *= 1 - coastLimit;
+		dist += coastLimit;
+		
 		return dist;
 	}
 }
