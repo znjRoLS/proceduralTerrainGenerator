@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class TerrainGenerator : MonoBehaviour {
 
@@ -18,6 +19,7 @@ public class TerrainGenerator : MonoBehaviour {
 
 
 	//height ,terrain and alpha map
+	private Terrain p_terrain;
 	private HeightMap p_heightMap;
 	private Vector2 p_terrainSize;
 	private AlphaMap p_alphaMap;
@@ -26,12 +28,35 @@ public class TerrainGenerator : MonoBehaviour {
 	public int heightMapSize = 513;
 	public int terrainSizeX = 2048;
 	public int terrainSizeY = 2048;
+	public int terrainHeight = 512;
+	public float waterLevel = 0.12f;
 
 
 	//GRAPH
 	private GraphVoronoi p_graphVoronoi;
 
 	public int voronoiPoints= 5000;
+
+
+	//textures and trees
+	private List<SplatPrototype> texturePrototypes;
+	private List<TreePrototype> treePrototypes;
+
+	public Texture2D[] textures;
+	public GameObject waterTexture;
+	public GameObject[] trees;
+
+
+	//@todo refactor
+	public int m_treeSeed = 2;
+	public float  m_treeFrq = 400.0f;
+	//Tree settings
+	public int m_treeSpacing = 32; //spacing between trees
+	public float m_treeDistance = 2000.0f; //The distance at which trees will no longer be drawn
+	public float m_treeBillboardDistance = 400.0f; //The distance at which trees meshes will turn into tree billboards
+	public float m_treeCrossFadeLength = 20.0f; //As trees turn to billboards there transform is rotated to match the meshes, a higher number will make this transition smoother
+	public int m_treeMaximumFullLODCount = 400; //The maximum number of trees that will be drawn in a certain area. 
+
 
 	// Use this for initialization
 	void Start () {
@@ -66,6 +91,14 @@ public class TerrainGenerator : MonoBehaviour {
 
 		fillAlphaMap ();
 
+		createWater ();
+
+		fillTexturesAndTrees ();
+
+		createTerrain ();
+
+		FillTreeInstances (p_terrain,p_heightMap.map);
+
 	}
 
 	private void setupGroundNoise(){
@@ -92,8 +125,7 @@ public class TerrainGenerator : MonoBehaviour {
 
 	private void fillHeightMap(){
 
-		p_heightMap = new HeightMap ();
-		p_heightMap.mapSize = heightMapSize;
+		p_heightMap = new HeightMap (heightMapSize);
 		p_heightMap.terrainSize = p_terrainSize;
 
 		HeightMapGenerator heightMapGenerator = new HeightMapGeneratorIsland ();
@@ -122,7 +154,124 @@ public class TerrainGenerator : MonoBehaviour {
 	}
 
 	private void fillAlphaMap(){
+		p_alphaMap = new AlphaMap (alphaMapSize, textures.Length);
+		p_alphaMap.terrainSize = p_terrainSize;
+
+		AlphaMapGenerator alphaMapGenerator = new AlphaMapGeneratorBiomes ();
+
+		alphaMapGenerator.generate (p_alphaMap, p_graphVoronoi);
 
 
 	}
+
+	private void createWater(){
+		int sizeX = (int) (terrainSizeX /2 * 1.41);
+		int sizeY = (int) (terrainSizeY /2 * 1.41);
+		float waterHeight = terrainHeight * waterLevel;
+		GameObject water = (GameObject)Instantiate (waterTexture, new Vector3 (0, waterHeight, 0), Quaternion.identity);
+		Vector3 v = water.transform.localScale;
+		water.transform.localScale = v + new Vector3 (sizeX, 0, sizeY);
+	}
+
+	private void fillTexturesAndTrees(){
+		
+		for (int i= 0; i < textures.Length ; i++) {
+			
+			SplatPrototype splatPrototype = new SplatPrototype();
+			splatPrototype.texture = textures[i];
+			splatPrototype.tileSize = new Vector2 (2, 2);
+			
+			texturePrototypes.Add( splatPrototype);
+			
+		}
+
+		for (int i= 0; i < trees.Length ; i++) {
+			
+			TreePrototype treePrototype = new TreePrototype();
+			treePrototype.prefab = trees[i];
+			
+			treePrototypes.Add( treePrototype);
+			
+		}
+	}
+
+	private void createTerrain(){
+		p_terrain = new Terrain();
+
+		TerrainData terrainData = new TerrainData();
+		terrainData.heightmapResolution = heightMapSize;
+		terrainData.SetHeights(0, 0, p_heightMap.map);
+		terrainData.size = new Vector3(terrainSizeX, terrainHeight, terrainSizeY);
+		terrainData.splatPrototypes = texturePrototypes.ToArray();
+		terrainData.treePrototypes = treePrototypes.ToArray();
+		terrainData.alphamapResolution = alphaMapSize;
+		terrainData.SetAlphamaps(0, 0, p_alphaMap.splitMap); //pridruzi alfa mapu terenu
+		
+		
+		p_terrain = Terrain.CreateTerrainGameObject(terrainData).GetComponent<Terrain>();
+		p_terrain.transform.position = new Vector3(-terrainSizeX*0.5f, 0,-terrainSizeY*0.5f); // zasto?
+		
+		
+		
+		p_terrain.castShadows = false;
+
+		p_terrain.treeDistance = m_treeDistance;
+		p_terrain.treeBillboardDistance = m_treeBillboardDistance;
+		p_terrain.treeCrossFadeLength = m_treeCrossFadeLength;
+		p_terrain.treeMaximumFullLODCount = m_treeMaximumFullLODCount;
+	}
+
+	void FillTreeInstances(Terrain terrain,float [,] htmap)
+	{
+		Random.seed = 0;
+		
+		for(int x = 0; x < terrainSizeX; x += m_treeSpacing) 
+		{
+			for (int y = 0; y < terrainSizeY; y += m_treeSpacing) 
+			{
+
+				
+				float offsetX = Random.value / (terrainSizeX - 1) * m_treeSpacing;
+				float offsetY = Random.value / (terrainSizeY - 1) * m_treeSpacing;
+				
+				float normX = x / (terrainSizeX - 1) + offsetX;
+				float normY = y / (terrainSizeY - 1) + offsetY;
+				
+				// Get the steepness value at the normalized coordinate.
+				float angle = terrain.terrainData.GetSteepness(normX, normY);
+				
+				// Steepness is given as an angle, 0..90 degrees. Divide
+				// by 90 to get an alpha blending value in the range 0..1.
+				float frac = angle / 90.0f;
+				
+				float height = p_heightMap.getHeight(y*heightMapSize/terrainSizeY,x*heightMapSize/terrainSizeX);
+		
+				
+				if(frac < 0.5f && height> waterLevel+0.05f) //make sure tree are not on steep slopes & in the sea
+				{
+			
+					float ht = terrain.terrainData.GetInterpolatedHeight(normX, normY);
+					
+					if( ht < terrainHeight*0.4f)
+					{
+						
+						TreeInstance temp = new TreeInstance();
+						temp.position = new Vector3(normX,ht,normY);
+						temp.prototypeIndex = Random.Range(0,3);
+						temp.widthScale = 1;
+						temp.heightScale = 1;
+						temp.color = Color.white;
+						temp.lightmapColor = Color.white;
+						
+						p_terrain.AddTreeInstance(temp);
+					}
+				}
+				
+			}
+		}
+		
+		
+		
+	}
+
 }

@@ -3,14 +3,14 @@ using System.Collections;
 
 public class AlphaMap {
 	
-	private float[,] p_map;
-	public float[,] map{get{return p_map;}}
+	private int[,] p_map;
+	public int[,] map{get{return p_map;}}
 
 	private float[,,] p_splitMap;
 	public float[,,] splitMap{ get { return p_splitMap; } }
 	
 	private int p_mapSize;
-	public int mapSize{ get { return p_mapSize; } set{ p_mapSize = value; p_map = new float[value,value];} }
+	public int mapSize{ get { return p_mapSize; } set{ p_mapSize = value; } }
 
 	private int p_numTextures;
 	public int numTextures{ set { p_numTextures = value; } }
@@ -22,13 +22,13 @@ public class AlphaMap {
 		p_mapSize = mapSize;
 		p_numTextures = numTextures;
 
-		p_map = new float[p_mapSize, p_mapSize];
+		p_map = new int[p_mapSize, p_mapSize];
 		p_splitMap = new float[p_mapSize, p_mapSize, p_numTextures];
 	}
 	
 	
 	
-	public void setAlpha(int x, int y, float val){
+	public void setAlpha(int x, int y, int val){
 		p_map[x,y] = val;
 	}
 	
@@ -46,7 +46,7 @@ public class AlphaMap {
 		}
 		
 		for (int i = 0; i< p_mapSize; i++)	for (int j=0; j< p_mapSize; j++) 
-			p_map[i,j] = (p_map[i,j] - mini)/(maxi-mini) * (max-min) + min;
+			p_map[i,j] = (int)((p_map[i,j] - mini)/(maxi-mini) * (max-min) + min);
 		
 	}
 	
@@ -55,10 +55,12 @@ public class AlphaMap {
 	}
 
 	public void fillSplitMap(){
-		for (int i = 0; i< p_mapSize; i++)	for (int j=0; j< p_mapSize; j++) {
-			for (int h=0;h<p_numTextures;h++)
-				p_splitMap[i,j,h] = 0;
-			p_splitMap[i,j,p_map[i,j]] = 1;
+				for (int i = 0; i< p_mapSize; i++)
+						for (int j=0; j< p_mapSize; j++) {
+								for (int h=0; h<p_numTextures; h++)
+										p_splitMap [i, j, h] = 0;
+								p_splitMap [i, j, p_map [i, j]] = 1;
 
+						}
 		}
 }
