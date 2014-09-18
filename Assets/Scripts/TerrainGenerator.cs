@@ -75,6 +75,8 @@ public class TerrainGenerator : MonoBehaviour {
 	void init(){
 
 		p_terrainSize = new Vector2 (terrainSizeX, terrainSizeY);
+		texturePrototypes = new List<SplatPrototype> ();
+		treePrototypes = new List<TreePrototype> ();
 	}
 
 
@@ -140,10 +142,11 @@ public class TerrainGenerator : MonoBehaviour {
 
 		p_graphVoronoi = new GraphVoronoi(voronoiPoints, heightMapSize);
 		p_graphVoronoi.pointGenerator = new RandomPointGenerator ();
-		p_graphVoronoi.createGraph ();
+		p_graphVoronoi.createVoronoi ();
 		p_graphVoronoi.assignCornerElevations (p_heightMap);
 		p_graphVoronoi.buildGraph ();
 		p_graphVoronoi.fillNearestCenters ();
+
 
 	}
 
@@ -154,6 +157,7 @@ public class TerrainGenerator : MonoBehaviour {
 	}
 
 	private void fillAlphaMap(){
+		Debug.Log (textures.Length);
 		p_alphaMap = new AlphaMap (alphaMapSize, textures.Length);
 		p_alphaMap.terrainSize = p_terrainSize;
 
@@ -201,7 +205,8 @@ public class TerrainGenerator : MonoBehaviour {
 		TerrainData terrainData = new TerrainData();
 		terrainData.heightmapResolution = heightMapSize;
 		terrainData.SetHeights(0, 0, p_heightMap.map);
-		terrainData.size = new Vector3(terrainSizeX, terrainHeight, terrainSizeY);
+		Debug.Log (terrainHeight);
+		terrainData.size = new Vector3((float)terrainSizeX, (float)terrainHeight, (float)terrainSizeY);
 		terrainData.splatPrototypes = texturePrototypes.ToArray();
 		terrainData.treePrototypes = treePrototypes.ToArray();
 		terrainData.alphamapResolution = alphaMapSize;
@@ -210,7 +215,7 @@ public class TerrainGenerator : MonoBehaviour {
 		
 		p_terrain = Terrain.CreateTerrainGameObject(terrainData).GetComponent<Terrain>();
 		p_terrain.transform.position = new Vector3(-terrainSizeX*0.5f, 0,-terrainSizeY*0.5f); // zasto?
-		
+
 		
 		
 		p_terrain.castShadows = false;
@@ -244,7 +249,7 @@ public class TerrainGenerator : MonoBehaviour {
 				// by 90 to get an alpha blending value in the range 0..1.
 				float frac = angle / 90.0f;
 				
-				float height = p_heightMap.getHeight(y*heightMapSize/terrainSizeY,x*heightMapSize/terrainSizeX);
+				float height = p_heightMap.getHeight((int)((float)y*heightMapSize/terrainSizeY),(int)((float)x*heightMapSize/terrainSizeX));
 		
 				
 				if(frac < 0.5f && height> waterLevel+0.05f) //make sure tree are not on steep slopes & in the sea

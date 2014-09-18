@@ -10,7 +10,7 @@ public class AlphaMapGeneratorBiomes : AlphaMapGenerator {
 	public void generate(AlphaMap alphaMap, GraphVoronoi graphVoronoi){
 
 		int alphaMapSize = alphaMap.mapSize;
-		int heightMapSize = 513;
+		int heightMapSize = 512;
 
 		float ratio = (float)heightMapSize / alphaMapSize;
 			

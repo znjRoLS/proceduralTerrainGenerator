@@ -17,9 +17,9 @@ public class GraphVoronoi {
 
 	private List<Corner> p_corners;
 	public List<Corner> corners{ get { return p_corners; } }
-
-	private Vector2 p_voronoiMapSize;
-	public Vector2 voronoiMapSize{ set { p_voronoiMapSize = value; } }
+	//@todo implement voronoi mapp size
+	//private Vector2 p_voronoiMapSize;
+	//public Vector2 voronoiMapSize{ set { p_voronoiMapSize = value; } }
 
 	private PointGenerator p_pointGenerator;
 	public PointGenerator pointGenerator{ set { p_pointGenerator = value; } }
@@ -48,18 +48,16 @@ public class GraphVoronoi {
 
 
 
+	public void createVoronoi(){
+		setPoints ();
+		p_voronoi = new Delaunay.Voronoi (p_points, null, new Rect (0, 0, p_heightMapSize, p_heightMapSize));
+		createGraph ();
 
+	}
 
 	public void buildGraph(){
 
 		assignOceanCoastAndLand ();
-
-		foreach (Corner q in p_corners) {
-			if (q.ocean || q.coast) {
-				q.elevation = 0f;
-			}
-		}	
-
 		assignPolygonElevations ();
 		calculateDownslopes ();
 		calculateWatersheds ();
@@ -74,9 +72,9 @@ public class GraphVoronoi {
 
 		for (int i=0; i <p_heightMapSize; i++)
 			for (int j=0; j<p_heightMapSize; j++)
-				p_nearestCenter [i, j] = centers [0];
+				p_nearestCenter [i, j] = p_centers [0];
 
-		foreach (Center center in centers) {
+		foreach (Center center in p_centers) {
 			
 			foreach(Vector2 point in GetPoints(p_voronoi.Region(center.point))){
 				
@@ -95,7 +93,6 @@ public class GraphVoronoi {
 
 	public void assignCornerElevations(HeightMap heightMap){
 
-		
 		foreach (Corner p in p_corners) {
 			
 			int elevX = (int) (p.point.x);
@@ -105,7 +102,6 @@ public class GraphVoronoi {
 			if (elevY == heightMap.mapSize) elevY--;
 			
 			p.elevation = heightMap.getHeight(elevX,elevY) ;
-			
 			p.water = p.elevation < waterLimit; //* (heightMaximum - heightMinimum) + heightMinimum;
 			
 		}
@@ -114,17 +110,15 @@ public class GraphVoronoi {
 
 
 	private void setPoints(){
-		p_points = p_pointGenerator.generate (p_numPoints,p_voronoiMapSize, p_boundaryOffset);
+		p_points = p_pointGenerator.generate (p_numPoints,new Vector2(p_heightMapSize, p_heightMapSize), p_boundaryOffset);
 	}
 
 
 
-	
 
-	public void createGraph() {
-		setPoints ();
-		p_voronoi = new Delaunay.Voronoi (p_points, null, new Rect (0, 0, p_voronoiMapSize.x, p_voronoiMapSize.y));
 
+
+	private void createGraph() {
 
 		Center p;
 		Corner q; 
@@ -143,7 +137,7 @@ public class GraphVoronoi {
 			p.neighbors = new List<Center>();
 			p.borders = new List<Edge>();
 			p.corners = new List<Corner>();
-			centers.Add(p);
+			p_centers.Add(p);
 			centerLookup[pp] = p;
 		}
 		foreach ( Center po in p_centers) {
@@ -236,7 +230,7 @@ public class GraphVoronoi {
 		if (! _cornerMap.ContainsKey(bucket)) _cornerMap[bucket] = new List<Corner>();
 		q = new Corner();
 		q.index = p_corners.Count;
-		corners.Add(q);
+		p_corners.Add(q);
 		q.point = point;
 		q.border = (point.x == 0 || point.x == p_heightMapSize
 		            || point.y == 0 || point.y == p_heightMapSize);
@@ -312,7 +306,7 @@ public class GraphVoronoi {
 	}
 	
 	
-	public void assignPolygonElevations(){
+	private void assignPolygonElevations(){
 		float sumElevation;
 
 		foreach (Center p in p_centers) {
@@ -327,7 +321,7 @@ public class GraphVoronoi {
 	
 	
 	
-	public List<Corner> landCorners(List<Corner> p_corners){
+	private List<Corner> landCorners(List<Corner> p_corners){
 		List<Corner> locations = new List<Corner> ();
 		foreach (Corner q in p_corners) {
 			if (!q.ocean && !q.coast) {
@@ -337,7 +331,7 @@ public class GraphVoronoi {
 		return locations;
 	}
 	
-	public void calculateDownslopes() {
+	private void calculateDownslopes() {
 		
 		
 		foreach (Corner q in p_corners) {
@@ -351,7 +345,7 @@ public class GraphVoronoi {
 		}
 	}
 	
-	public void calculateWatersheds() {
+	private void calculateWatersheds() {
 		//var q:Corner, r:Corner, i:int, changed:Boolean;
 		bool changed;
 		int i;
@@ -386,10 +380,10 @@ public class GraphVoronoi {
 		
 	}
 	
-	public void createRivers() {
+	private void createRivers() {
 		//var i:int, q:Corner, edge:Edge;
 		int k=0;
-		for (int i = 0; i <corners.Count/2; i++) {
+		for (int i = 0; i <p_corners.Count/2; i++) {
 			Corner q = p_corners[Random.Range(0, p_corners.Count-1)];
 			if (q.ocean || q.elevation<waterLimit || q.elevation > 0.9f) continue;
 			// Bias rivers to go west: if (q.downslope.x > q.x) continue;
@@ -407,14 +401,14 @@ public class GraphVoronoi {
 			
 		}
 	}
-	public Edge lookupEdgeFromCorner(Corner q, Corner s) {
+	private Edge lookupEdgeFromCorner(Corner q, Corner s) {
 		foreach (Edge edge in q.protrudes) {
 			if (edge.v0 == s || edge.v1 == s) return edge;
 		}
 		return null;
 	}
 	
-	public void assignCornerMoisture() {
+	private void assignCornerMoisture() {
 		//Corner q, r;
 		float	  newMoisture;
 		Queue<Corner> queue=new Queue<Corner>();
@@ -441,13 +435,12 @@ public class GraphVoronoi {
 			if (q.ocean || q.coast) {
 				q.moisture = 1.0f;
 			}
-			Debug.Log (q.moisture);
 		}
 	}
 	
 	
 	
-	public void assignPolygonMoisture() {
+	private void assignPolygonMoisture() {
 		//Center p, q;
 		float	 sumMoisture;
 		foreach (Center p in p_centers) {
@@ -457,8 +450,7 @@ public class GraphVoronoi {
 				sumMoisture += q.moisture;
 			}
 			p.moisture = sumMoisture / p.corners.Count;
-			
-			//			if (p.elevation>0.7f) Debug.Log (p.moisture);
+
 		}
 		
 	}

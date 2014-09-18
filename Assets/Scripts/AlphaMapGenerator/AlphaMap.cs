@@ -59,6 +59,7 @@ public class AlphaMap {
 						for (int j=0; j< p_mapSize; j++) {
 								for (int h=0; h<p_numTextures; h++)
 										p_splitMap [i, j, h] = 0;
+			if (p_map[i,j] >17) Debug.Log(i + " " + j + " " + p_map[i,j]);
 								p_splitMap [i, j, p_map [i, j]] = 1;
 
 						}
