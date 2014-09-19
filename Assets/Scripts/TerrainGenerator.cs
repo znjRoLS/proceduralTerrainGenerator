@@ -206,7 +206,7 @@ public class TerrainGenerator : MonoBehaviour {
 		p_graphVoronoi.terrainSize = p_terrainSize;
 		p_graphVoronoi.terrainHeight = terrainHeight;
 		p_graphVoronoi.createVoronoi ();
-		p_graphVoronoi.assignCornerElevations ();
+		p_graphVoronoi.assignCornerElevations (p_heightMap);
 		p_graphVoronoi.buildGraph ();
 		p_graphVoronoi.fillNearestCenters ();
 

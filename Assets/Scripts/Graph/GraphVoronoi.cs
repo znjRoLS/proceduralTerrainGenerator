@@ -97,35 +97,37 @@ public class GraphVoronoi {
 		return p_nearestCenter [i, j];
 		}
 
-//	public void assignCornerElevations(HeightMap heightMap){
-//
-//		foreach (Corner p in p_corners) {
-//			
-//			int elevX = (int) (p.point.x);
-//			int elevY = (int) (p.point.y);
-//			
-//			if (elevX == heightMap.mapSize) elevX--;
-//			if (elevY == heightMap.mapSize) elevY--;
-//			
-//			p.elevation = heightMap.getHeight(elevX,elevY) ;
-//			p.water = p.elevation < waterLimit; //* (heightMaximum - heightMinimum) + heightMinimum;
-//			
-//		}
-//		
-//	}
+	public void assignCornerElevations(HeightMap heightMap){
 
-	public void assignCornerElevations(){
-		
 		foreach (Corner p in p_corners) {
 			
-			p.elevation = Terrain.activeTerrain.SampleHeight(new Vector3(p.point.x /p_heightMapSize * p_terrainSize.x - p_terrainSize.x/2,0.0f,p.point.y/p_heightMapSize * p_terrainSize.y- p_terrainSize.y/2));
-			p.elevation/= p_terrainHeight;
-
+			int elevX = (int) (p.point.x);
+			int elevY = (int) (p.point.y);
+			
+			if (elevX == heightMap.mapSize) elevX--;
+			if (elevY == heightMap.mapSize) elevY--;
+			
+			p.elevation = heightMap.getHeight(elevX,elevY) ;
 			p.water = p.elevation < waterLimit; //* (heightMaximum - heightMinimum) + heightMinimum;
 			
 		}
 		
 	}
+
+//	public void assignCornerElevations(){
+//		
+//		foreach (Corner p in p_corners) {
+//			float X = p.point.x /p_heightMapSize * p_terrainSize.x - p_terrainSize.x/2;
+//			float Y = p.point.y/p_heightMapSize * p_terrainSize.y- p_terrainSize.y/2;
+//
+//			p.elevation = Terrain.activeTerrain.SampleHeight(new Vector3(X,0.0f,Y));
+//			p.elevation/= p_terrainHeight;
+//
+//			p.water = p.elevation < waterLimit; //* (heightMaximum - heightMinimum) + heightMinimum;
+//			
+//		}
+//		
+//	}
 
 
 	private void setPoints(){
