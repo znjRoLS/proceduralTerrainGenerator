@@ -97,7 +97,6 @@ public class TerrainGenerator : MonoBehaviour {
 	}
 
 	void init(){
-
 		p_terrainSize = new Vector2 (terrainSizeX, terrainSizeY);
 		texturePrototypes = new List<SplatPrototype> ();
 		treePrototypes = new List<TreePrototype> ();
@@ -128,13 +127,19 @@ public class TerrainGenerator : MonoBehaviour {
 
 		fillTreeInstances ();
 
+		fillHouses ();
 
-		Field.start (p_terrain, heightMapSize, p_heightMap.map,object1, object2, object3, waterLevel);
+		foreach (Edge edge in p_graphVoronoi.edges)
+			if (edge.river != 0) {
+				
+			float beginX = edge.v0.point.x * terrainSizeX / heightMapSize - terrainSizeX/2;
+			float beginY = edge.v0.point.y * terrainSizeY / heightMapSize - terrainSizeY/2;
+			float endX = edge.v1.point.x * terrainSizeX / heightMapSize - terrainSizeX/2;
+			float endY = edge.v1.point.y * terrainSizeY / heightMapSize - terrainSizeY/2;
 
-		foreach (GameObject house in GameObject.FindGameObjectsWithTag("house"))
-						house.transform.position += new Vector3 (-terrainSizeX / 2, 0, -terrainSizeY/2);
-
-	}
+				Debug.DrawLine (new Vector3 (beginX, Terrain.activeTerrain.SampleHeight(new Vector3(beginX,0.0f,beginY)) + 10.0f, beginY), new Vector3 (endX, Terrain.activeTerrain.SampleHeight(new Vector3(endX, 0.0f, endY))+10.0f, endY), Color.red, 1000.0f);
+			}
+		}
 
 	private void setupGroundNoise(){
 
@@ -198,8 +203,10 @@ public class TerrainGenerator : MonoBehaviour {
 
 		p_graphVoronoi = new GraphVoronoi(voronoiPoints, heightMapSize);
 		p_graphVoronoi.pointGenerator = new RandomPointGenerator ();
+		p_graphVoronoi.terrainSize = p_terrainSize;
+		p_graphVoronoi.terrainHeight = terrainHeight;
 		p_graphVoronoi.createVoronoi ();
-		p_graphVoronoi.assignCornerElevations (p_heightMap);
+		p_graphVoronoi.assignCornerElevations ();
 		p_graphVoronoi.buildGraph ();
 		p_graphVoronoi.fillNearestCenters ();
 
@@ -372,6 +379,11 @@ public class TerrainGenerator : MonoBehaviour {
 		
 	}
 
-
+	private void fillHouses(){
+		Field.start (p_terrain, heightMapSize, p_heightMap.map,object1, object2, object3, waterLevel);
+		
+		foreach (GameObject house in GameObject.FindGameObjectsWithTag("house"))
+			house.transform.position += new Vector3 (-terrainSizeX / 2, 0, -terrainSizeY/2);
+	}
 
 }
