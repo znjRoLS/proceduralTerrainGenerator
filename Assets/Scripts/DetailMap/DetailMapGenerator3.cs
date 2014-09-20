@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class DetailMapGenerator3 : DetailMapGenerator {
+public class DetailMapGenerator3 {
 
 
 

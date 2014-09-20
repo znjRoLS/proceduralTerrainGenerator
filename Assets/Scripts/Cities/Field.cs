@@ -94,16 +94,21 @@ public class Field {
 
 	static float angleLimit = 20;
 
-	public static void start(Terrain t, int tSize, float [,] htmap, GameObject object1,GameObject object2,GameObject object3,float waterLimit){
+	public static void start(Terrain t, int tSize, Vector2 terrainSize, int terrainHeight, GameObject object1,GameObject object2,GameObject object3,float waterLimit){
 
 		float[,] newMat = new float[tSize, tSize];
 
+		for (int i=0; i< tSize; i++)
+						for (int j=0; j<tSize; j++) {
+			Vector2 point = TerrainGenerator.getTerrainFromHeightMap (new Vector2 (i, j), tSize, terrainSize);
+								newMat [j,i] = Terrain.activeTerrain.SampleHeight (new Vector3 (point.x, 0 , point.y)) / terrainHeight;
+						}
 
 		mat = new Elem[(tSize+tile-1)/tile+2,(tSize+tile-1)/tile+2];
 		size = (tSize+tile-1)/tile+2;
 
 //		newMat = t.terrainData.GetHeights (0, 0, tSize, tSize);
-		newMat=htmap;
+		//newMat=htmap;
 		shift (newMat);
 
 		fill ();

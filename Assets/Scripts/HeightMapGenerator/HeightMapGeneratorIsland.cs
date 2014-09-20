@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class HeightMapGeneratorIsland : HeightMapGenerator {
+public class HeightMapGeneratorIsland {
 
 	private Noise2D p_groundNoise;
 	public Noise2D groundNoise {set{p_groundNoise= value;}}

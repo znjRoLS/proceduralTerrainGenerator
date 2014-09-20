@@ -81,6 +81,27 @@ public class TerrainGenerator : MonoBehaviour {
 	//da houses
 	public GameObject object1, object2, object3;
 
+	//transform coords
+
+	
+	public static Vector2 getTerrainFromHeightMap(Vector2 point, int heightMapSize, Vector2 p_terrainSize){
+		float X = point.x / heightMapSize * p_terrainSize.x;// - p_terrainSize.x/2;
+		float Y = point.y/heightMapSize * p_terrainSize.y;//- p_terrainSize.y/2;
+		
+		return new Vector2 (X, Y);
+		
+	}
+	
+	public static Vector2 getHeightMapFromTerrain(Vector2 point, int heightMapSize, Vector2 p_terrainSize){
+		//float X = (point.x + p_terrainSize.x/2) * heightMapSize / p_terrainSize.x;
+		//float Y = (point.y + p_terrainSize.y/2) * heightMapSize / p_terrainSize.y;
+		float X = point.x * heightMapSize / p_terrainSize.x;
+		float Y = point.y * heightMapSize / p_terrainSize.y;
+		
+		return new Vector2 (X, Y);
+		
+	}
+
 
 	// Use this for initialization
 	void Start () {
@@ -104,10 +125,17 @@ public class TerrainGenerator : MonoBehaviour {
 	}
 
 
+
+
+
 	private void generateTerrain(){
 
 		setupGroundNoise();
 		setupMountainNoise ();
+		
+		fillPrototypes ();
+		
+		createTerrain ();
 
 		fillHeightMap ();
 
@@ -119,11 +147,7 @@ public class TerrainGenerator : MonoBehaviour {
 
 		createWater ();
 
-		fillPrototypes ();
-
 		fillDetailMap ();
-
-		createTerrain ();
 
 		fillTreeInstances ();
 
@@ -132,10 +156,10 @@ public class TerrainGenerator : MonoBehaviour {
 		foreach (Edge edge in p_graphVoronoi.edges)
 			if (edge.river != 0) {
 				
-			float beginX = edge.v0.point.x * terrainSizeX / heightMapSize - terrainSizeX/2;
-			float beginY = edge.v0.point.y * terrainSizeY / heightMapSize - terrainSizeY/2;
-			float endX = edge.v1.point.x * terrainSizeX / heightMapSize - terrainSizeX/2;
-			float endY = edge.v1.point.y * terrainSizeY / heightMapSize - terrainSizeY/2;
+			float beginX = edge.v0.point.x * terrainSizeX / heightMapSize;// - terrainSizeX/2;
+			float beginY = edge.v0.point.y * terrainSizeY / heightMapSize;// - terrainSizeY/2;
+			float endX = edge.v1.point.x * terrainSizeX / heightMapSize;// - terrainSizeX/2;
+			float endY = edge.v1.point.y * terrainSizeY / heightMapSize;// - terrainSizeY/2;
 
 				Debug.DrawLine (new Vector3 (beginX, Terrain.activeTerrain.SampleHeight(new Vector3(beginX,0.0f,beginY)) + 10.0f, beginY), new Vector3 (endX, Terrain.activeTerrain.SampleHeight(new Vector3(endX, 0.0f, endY))+10.0f, endY), Color.red, 1000.0f);
 			}
@@ -168,11 +192,13 @@ public class TerrainGenerator : MonoBehaviour {
 		p_heightMap = new HeightMap (heightMapSize);
 		p_heightMap.terrainSize = p_terrainSize;
 
-		HeightMapGenerator heightMapGenerator = new HeightMapGeneratorIsland ();
+		HeightMapGeneratorIsland heightMapGenerator = new HeightMapGeneratorIsland ();
 
 		heightMapGenerator.groundNoise = p_groundNoise;
 		heightMapGenerator.mountainNoise = p_mountainNoise;
 		heightMapGenerator.generate (p_heightMap);
+
+		p_terrain.terrainData.SetHeights (0, 0, p_heightMap.map);
 
 	}
 
@@ -181,9 +207,13 @@ public class TerrainGenerator : MonoBehaviour {
 		p_detailMap = new DetailMap(detailMapSize, details.Length);
 		p_detailMap.heightMapSize = heightMapSize;
 
-		DetailMapGenerator detailMapGenerator = new DetailMapGenerator3 ();
+		DetailMapGenerator3 detailMapGenerator = new DetailMapGenerator3 ();
 
-		detailMapGenerator.generate (p_detailMap, p_graphVoronoi);		
+		detailMapGenerator.generate (p_detailMap, p_graphVoronoi);	
+
+		for (int i=0; i< p_detailMap.map.Count ; i++)
+			p_terrain.terrainData.SetDetailLayer(0,0,i,p_detailMap.map[i]);
+
 		
 	}
 
@@ -192,10 +222,11 @@ public class TerrainGenerator : MonoBehaviour {
 		p_alphaMap = new AlphaMap (alphaMapSize, textures.Length);
 		p_alphaMap.terrainSize = p_terrainSize;
 		
-		AlphaMapGenerator alphaMapGenerator = new AlphaMapGeneratorBiomes ();
+		AlphaMapGeneratorBiomes alphaMapGenerator = new AlphaMapGeneratorBiomes ();
 		
 		alphaMapGenerator.generate (p_alphaMap, p_graphVoronoi);
-		
+
+		p_terrain.terrainData.SetAlphamaps (0, 0, p_alphaMap.splitMap); 	
 		
 	}
 
@@ -205,8 +236,9 @@ public class TerrainGenerator : MonoBehaviour {
 		p_graphVoronoi.pointGenerator = new RandomPointGenerator ();
 		p_graphVoronoi.terrainSize = p_terrainSize;
 		p_graphVoronoi.terrainHeight = terrainHeight;
+		p_graphVoronoi.waterLimit = waterLevel;
 		p_graphVoronoi.createVoronoi ();
-		p_graphVoronoi.assignCornerElevations (p_heightMap);
+		p_graphVoronoi.assignCornerElevations (p_terrain);
 		p_graphVoronoi.buildGraph ();
 		p_graphVoronoi.fillNearestCenters ();
 
@@ -225,7 +257,7 @@ public class TerrainGenerator : MonoBehaviour {
 		int sizeX = (int) (terrainSizeX /2 * 1.41);
 		int sizeY = (int) (terrainSizeY /2 * 1.41);
 		float waterHeight = terrainHeight * waterLevel;
-		GameObject water = (GameObject)Instantiate (waterTexture, new Vector3 (0, waterHeight, 0), Quaternion.identity);
+		GameObject water = (GameObject)Instantiate (waterTexture, new Vector3 (p_terrainSize.x/2, waterHeight, p_terrainSize.y/2), Quaternion.identity);
 		Vector3 v = water.transform.localScale;
 		water.transform.localScale = v + new Vector3 (sizeX, 0, sizeY);
 	}
@@ -267,27 +299,17 @@ public class TerrainGenerator : MonoBehaviour {
 	private void createTerrain(){
 
 		TerrainData terrainData = new TerrainData();
+		terrainData.alphamapResolution = alphaMapSize;
 		terrainData.heightmapResolution = heightMapSize;
-		terrainData.SetHeights(0, 0, p_heightMap.map);
+		terrainData.SetDetailResolution (detailMapSize, m_detailResolutionPerPatch);
 		terrainData.size = new Vector3((float)terrainSizeX, (float)terrainHeight, (float)terrainSizeY);
 		terrainData.splatPrototypes = texturePrototypes.ToArray();
 		terrainData.treePrototypes = treePrototypes.ToArray();
 		terrainData.detailPrototypes = detailPrototypes.ToArray();
-		terrainData.alphamapResolution = alphaMapSize;
-		terrainData.SetAlphamaps(0, 0, p_alphaMap.splitMap); //pridruzi alfa mapu terenu
-		
-		
+
+		//p_terrain.transform.position = new Vector3(-terrainSizeX*0.5f, 0,-terrainSizeY*0.5f);
+
 		p_terrain = Terrain.CreateTerrainGameObject(terrainData).GetComponent<Terrain>();
-		p_terrain.transform.position = new Vector3(-terrainSizeX*0.5f, 0,-terrainSizeY*0.5f); // zasto?
-
-		
-		
-		p_terrain.castShadows = false;
-
-		p_terrain.treeDistance = m_treeDistance;
-		p_terrain.treeBillboardDistance = m_treeBillboardDistance;
-		p_terrain.treeCrossFadeLength = m_treeCrossFadeLength;
-		p_terrain.treeMaximumFullLODCount = m_treeMaximumFullLODCount;
 
 		p_terrain.terrainData.wavingGrassStrength = m_wavingGrassStrength;
 		p_terrain.terrainData.wavingGrassAmount = m_wavingGrassAmount;
@@ -295,17 +317,11 @@ public class TerrainGenerator : MonoBehaviour {
 		p_terrain.terrainData.wavingGrassTint = m_wavingGrassTint;
 		p_terrain.detailObjectDensity = m_detailObjectDensity;
 		p_terrain.detailObjectDistance = m_detailObjectDistance;
-		p_terrain.terrainData.SetDetailResolution(detailMapSize, m_detailResolutionPerPatch);
-
-//		int[,] dd = new int[512,512];
-//		for (int i=0; i<512; i++)
-//						for (int j=0; j<512; j++)
-//								dd [i, j] = 0;
-//
-//		p_terrain.terrainData.SetDetailLayer (0, 0, 0, dd);
-		for (int i=0; i< p_detailMap.map.Count ; i++)
-			p_terrain.terrainData.SetDetailLayer(0,0,i,p_detailMap.map[i]);
-
+		p_terrain.treeDistance = m_treeDistance;
+		p_terrain.treeBillboardDistance = m_treeBillboardDistance;
+		p_terrain.treeCrossFadeLength = m_treeCrossFadeLength;
+		p_terrain.treeMaximumFullLODCount = m_treeMaximumFullLODCount;
+		p_terrain.castShadows = false;
 	}
 
 	void fillTreeInstances()
@@ -380,10 +396,10 @@ public class TerrainGenerator : MonoBehaviour {
 	}
 
 	private void fillHouses(){
-		Field.start (p_terrain, heightMapSize, p_heightMap.map,object1, object2, object3, waterLevel);
+		Field.start (p_terrain, heightMapSize, p_terrainSize, terrainHeight ,object1, object2, object3, waterLevel);
 		
-		foreach (GameObject house in GameObject.FindGameObjectsWithTag("house"))
-			house.transform.position += new Vector3 (-terrainSizeX / 2, 0, -terrainSizeY/2);
+//		foreach (GameObject house in GameObject.FindGameObjectsWithTag("house"))
+//			house.transform.position += new Vector3 (-terrainSizeX / 2, 0, -terrainSizeY/2);
 	}
 
 }

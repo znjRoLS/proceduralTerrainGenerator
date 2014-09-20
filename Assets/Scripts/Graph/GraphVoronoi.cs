@@ -35,7 +35,7 @@ public class GraphVoronoi {
 	private int p_numPoints;
 	private int p_heightMapSize;
 	private Dictionary<int,List<Corner>> _cornerMap = new Dictionary<int,List<Corner>>();
-	private float waterLimit = 0.12f;
+	public float waterLimit ;
 
 	public GraphVoronoi(int numPoints, int mapSize){
 		p_numPoints = numPoints;
@@ -97,37 +97,41 @@ public class GraphVoronoi {
 		return p_nearestCenter [i, j];
 		}
 
-	public void assignCornerElevations(HeightMap heightMap){
-
-		foreach (Corner p in p_corners) {
-			
-			int elevX = (int) (p.point.x);
-			int elevY = (int) (p.point.y);
-			
-			if (elevX == heightMap.mapSize) elevX--;
-			if (elevY == heightMap.mapSize) elevY--;
-			
-			p.elevation = heightMap.getHeight(elevX,elevY) ;
-			p.water = p.elevation < waterLimit; //* (heightMaximum - heightMinimum) + heightMinimum;
-			
-		}
-		
-	}
-
-//	public void assignCornerElevations(){
-//		
+//	public void assignCornerElevations(HeightMap heightMap){
+//
 //		foreach (Corner p in p_corners) {
-//			float X = p.point.x /p_heightMapSize * p_terrainSize.x - p_terrainSize.x/2;
-//			float Y = p.point.y/p_heightMapSize * p_terrainSize.y- p_terrainSize.y/2;
-//
-//			p.elevation = Terrain.activeTerrain.SampleHeight(new Vector3(X,0.0f,Y));
-//			p.elevation/= p_terrainHeight;
-//
+//			
+//			int elevX = (int) (p.point.x);
+//			int elevY = (int) (p.point.y);
+//			
+//			if (elevX == heightMap.mapSize) elevX--;
+//			if (elevY == heightMap.mapSize) elevY--;
+//			
+//			p.elevation = heightMap.getHeight(elevX,elevY) ;
 //			p.water = p.elevation < waterLimit; //* (heightMaximum - heightMinimum) + heightMinimum;
 //			
 //		}
 //		
 //	}
+
+	public void assignCornerElevations(Terrain terrain){
+		int i = 100;
+		foreach (Corner p in p_corners) {
+
+			Vector2 coords = TerrainGenerator.getTerrainFromHeightMap(p.point, p_heightMapSize, p_terrainSize);
+
+			p.elevation = Terrain.activeTerrain.SampleHeight(new Vector3(coords.x,0.0f,coords.y));
+			p.elevation/= p_terrainHeight;
+			if (i!=0){
+				Debug.Log ("Corner at " + p.point.x + " " + p.point.y + " is elevated " + p.elevation + " trans coords " + coords.x + " " + coords.y);
+				i--;
+			}
+
+			p.water = p.elevation < waterLimit; //* (heightMaximum - heightMinimum) + heightMinimum;
+			
+		}
+		
+	}
 
 
 	private void setPoints(){
