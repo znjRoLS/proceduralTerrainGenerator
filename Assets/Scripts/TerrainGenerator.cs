@@ -130,39 +130,35 @@ public class TerrainGenerator : MonoBehaviour {
 
 	private void generateTerrain(){
 
-		setupGroundNoise();
-		setupMountainNoise ();
+				setupGroundNoise ();
+				setupMountainNoise ();
 		
-		fillPrototypes ();
+				fillPrototypes ();
 		
-		createTerrain ();
+				createTerrain ();
 
-		fillHeightMap ();
+				fillHeightMap ();
 
-		buildGraph ();
+				buildGraph ();
 
-		assignBiomes ();
+				assignBiomes ();
 
-		fillAlphaMap ();
+				fillAlphaMap ();
 
-		createWater ();
+				createWater ();
 
-		fillDetailMap ();
+				fillDetailMap ();
 
-		fillTreeInstances ();
+				fillTreeInstances ();
 
-		fillHouses ();
+				fillHouses ();
 
-		foreach (Edge edge in p_graphVoronoi.edges)
-			if (edge.river != 0) {
+			generateRivers ();
+
+				debugMe ();
+
 				
-			float beginX = edge.v0.point.x * terrainSizeX / heightMapSize;// - terrainSizeX/2;
-			float beginY = edge.v0.point.y * terrainSizeY / heightMapSize;// - terrainSizeY/2;
-			float endX = edge.v1.point.x * terrainSizeX / heightMapSize;// - terrainSizeX/2;
-			float endY = edge.v1.point.y * terrainSizeY / heightMapSize;// - terrainSizeY/2;
 
-				Debug.DrawLine (new Vector3 (beginX, Terrain.activeTerrain.SampleHeight(new Vector3(beginX,0.0f,beginY)) + 10.0f, beginY), new Vector3 (endX, Terrain.activeTerrain.SampleHeight(new Vector3(endX, 0.0f, endY))+10.0f, endY), Color.red, 1000.0f);
-			}
 		}
 
 	private void setupGroundNoise(){
@@ -401,5 +397,38 @@ public class TerrainGenerator : MonoBehaviour {
 //		foreach (GameObject house in GameObject.FindGameObjectsWithTag("house"))
 //			house.transform.position += new Vector3 (-terrainSizeX / 2, 0, -terrainSizeY/2);
 	}
+
+	private void generateRivers(){
+
+		RiverGenerator riverGenerator = new RiverGenerator ();
+		List<Vector2> p = new List<Vector2> ();
+
+		p.Add (new Vector2 (1,1));
+		p.Add (new Vector2 (1,2));
+		p.Add (new Vector2 (2,1));
+		p.Add (new Vector2 (2,2));
+		p.Add (new Vector2 (3,1));
+		p.Add (new Vector2 (3,2));
+		p.Add (new Vector2 (4,1));
+		p.Add (new Vector2 (4,2));
+
+		riverGenerator.generate (p);
+
+	}
+
+	private void debugMe(){
+
+				foreach (Edge edge in p_graphVoronoi.edges)
+						if (edge.river != 0) {
+			
+								float beginX = edge.v0.point.x * terrainSizeX / heightMapSize;// - terrainSizeX/2;
+								float beginY = edge.v0.point.y * terrainSizeY / heightMapSize;// - terrainSizeY/2;
+								float endX = edge.v1.point.x * terrainSizeX / heightMapSize;// - terrainSizeX/2;
+								float endY = edge.v1.point.y * terrainSizeY / heightMapSize;// - terrainSizeY/2;
+			
+								Debug.DrawLine (new Vector3 (beginX, Terrain.activeTerrain.SampleHeight (new Vector3 (beginX, 0.0f, beginY)) + 10.0f, beginY), new Vector3 (endX, Terrain.activeTerrain.SampleHeight (new Vector3 (endX, 0.0f, endY)) + 10.0f, endY), Color.red, 1000.0f);
+						}
+
+		}
 
 }
