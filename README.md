@@ -1,4 +1,2 @@
-proceduralTerrainGenerator
-==========================
-
-procedural terrain generation in Unity3D
+#Procedural terrain generator
+Written in Unity3D
